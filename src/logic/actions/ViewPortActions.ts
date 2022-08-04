@@ -1,19 +1,19 @@
-import {EditorModel} from "../../staticModels/EditorModel";
-import {NumberUtil} from "../../utils/NumberUtil";
-import {ViewPointSettings} from "../../settings/ViewPointSettings";
-import {ISize} from "../../interfaces/ISize";
-import {IRect} from "../../interfaces/IRect";
-import {ImageUtil} from "../../utils/ImageUtil";
-import {RectUtil} from "../../utils/RectUtil";
-import {IPoint} from "../../interfaces/IPoint";
-import {PointUtil} from "../../utils/PointUtil";
-import {SizeUtil} from "../../utils/SizeUtil";
-import {EditorActions} from "./EditorActions";
-import {Direction} from "../../data/enums/Direction";
-import {DirectionUtil} from "../../utils/DirectionUtil";
-import {GeneralSelector} from "../../store/selectors/GeneralSelector";
-import {store} from "../../index";
-import {updateZoom} from "../../store/general/actionCreators";
+import {EditorModel} from '../../staticModels/EditorModel';
+import {NumberUtil} from '../../utils/NumberUtil';
+import {ViewPointSettings} from '../../settings/ViewPointSettings';
+import {ISize} from '../../interfaces/ISize';
+import {IRect} from '../../interfaces/IRect';
+import {ImageUtil} from '../../utils/ImageUtil';
+import {RectUtil} from '../../utils/RectUtil';
+import {IPoint} from '../../interfaces/IPoint';
+import {PointUtil} from '../../utils/PointUtil';
+import {SizeUtil} from '../../utils/SizeUtil';
+import {EditorActions} from './EditorActions';
+import {Direction} from '../../data/enums/Direction';
+import {DirectionUtil} from '../../utils/DirectionUtil';
+import {GeneralSelector} from '../../store/selectors/GeneralSelector';
+import {store} from '../../index';
+import {updateZoom} from '../../store/general/actionCreators';
 
 export class ViewPortActions {
     public static updateViewPortSize() {
@@ -27,18 +27,24 @@ export class ViewPortActions {
 
     public static updateDefaultViewPortImageRect() {
         if (!!EditorModel.viewPortSize && !!EditorModel.image) {
-            const minMargin: IPoint = {x: ViewPointSettings.CANVAS_MIN_MARGIN_PX, y: ViewPointSettings.CANVAS_MIN_MARGIN_PX};
+            const minMargin: IPoint = {
+                x: ViewPointSettings.CANVAS_MIN_MARGIN_PX,
+                y: ViewPointSettings.CANVAS_MIN_MARGIN_PX
+            };
             const realImageRect: IRect = {x: 0, y: 0, ...ImageUtil.getSize(EditorModel.image)};
             const viewPortWithMarginRect: IRect = {x: 0, y: 0, ...EditorModel.viewPortSize};
-            const viewPortWithoutMarginRect: IRect = RectUtil.expand(viewPortWithMarginRect, PointUtil.multiply(minMargin, -1));
-            EditorModel.defaultRenderImageRect = RectUtil.fitInsideRectWithRatio(viewPortWithoutMarginRect, RectUtil.getRatio(realImageRect));
+            const viewPortWithoutMarginRect: IRect = RectUtil
+                .expand(viewPortWithMarginRect, PointUtil.multiply(minMargin, -1));
+            EditorModel.defaultRenderImageRect = RectUtil
+                .fitInsideRectWithRatio(viewPortWithoutMarginRect, RectUtil.getRatio(realImageRect));
         }
     }
 
     public static calculateViewPortContentSize(): ISize {
         if (!!EditorModel.viewPortSize && !!EditorModel.image) {
             const defaultViewPortImageRect: IRect = EditorModel.defaultRenderImageRect;
-            const scaledImageSize: ISize = SizeUtil.scale(EditorModel.defaultRenderImageRect, GeneralSelector.getZoom());
+            const scaledImageSize: ISize = SizeUtil
+                .scale(EditorModel.defaultRenderImageRect, GeneralSelector.getZoom());
             return {
                 width: scaledImageSize.width + 2 * defaultViewPortImageRect.x,
                 height: scaledImageSize.height + 2 * defaultViewPortImageRect.y
@@ -71,7 +77,9 @@ export class ViewPortActions {
 
     public static resizeViewPortContent() {
         const viewPortContentSize = ViewPortActions.calculateViewPortContentSize();
-        viewPortContentSize && ViewPortActions.resizeCanvas(viewPortContentSize);
+        if (viewPortContentSize) {
+            ViewPortActions.resizeCanvas(viewPortContentSize);
+        }
     }
 
     public static calculateAbsoluteScrollPosition(relativePosition: IPoint): IPoint {
@@ -113,13 +121,15 @@ export class ViewPortActions {
     }
 
     public static translateViewPortPosition(direction: Direction) {
-        if (EditorModel.viewPortActionsDisabled) return;
+        if (EditorModel.viewPortActionsDisabled || GeneralSelector.getZoom() === ViewPointSettings.MIN_ZOOM) return;
 
         const directionVector: IPoint = DirectionUtil.convertDirectionToVector(direction);
         const translationVector: IPoint = PointUtil.multiply(directionVector, ViewPointSettings.TRANSLATION_STEP_PX);
         const currentScrollPosition = ViewPortActions.getAbsoluteScrollPosition();
         const nextScrollPosition = PointUtil.add(currentScrollPosition, translationVector);
         ViewPortActions.setScrollPosition(nextScrollPosition);
+        EditorModel.mousePositionOnViewPortContent = PointUtil
+            .add(EditorModel.mousePositionOnViewPortContent, translationVector);
         EditorActions.fullRender();
     }
 
@@ -142,7 +152,8 @@ export class ViewPortActions {
         const currentRelativeScrollPosition: IPoint = ViewPortActions.getRelativeScrollPosition();
         ViewPortActions.setZoom(currentZoom - ViewPointSettings.ZOOM_STEP);
         ViewPortActions.resizeViewPortContent();
-        ViewPortActions.setScrollPosition(ViewPortActions.calculateAbsoluteScrollPosition(currentRelativeScrollPosition));
+        ViewPortActions.setScrollPosition(ViewPortActions
+            .calculateAbsoluteScrollPosition(currentRelativeScrollPosition));
         EditorActions.fullRender();
     }
 
@@ -150,7 +161,8 @@ export class ViewPortActions {
         const currentRelativeScrollPosition: IPoint = ViewPortActions.getRelativeScrollPosition();
         ViewPortActions.setZoom(ViewPointSettings.MIN_ZOOM);
         ViewPortActions.resizeViewPortContent();
-        ViewPortActions.setScrollPosition(ViewPortActions.calculateAbsoluteScrollPosition(currentRelativeScrollPosition));
+        ViewPortActions.setScrollPosition(ViewPortActions
+            .calculateAbsoluteScrollPosition(currentRelativeScrollPosition));
         EditorActions.fullRender();
     }
 
@@ -169,7 +181,6 @@ export class ViewPortActions {
         const currentZoom: number = GeneralSelector.getZoom();
         const isNewValueValid: boolean = NumberUtil.isValueInRange(
             value, ViewPointSettings.MIN_ZOOM, ViewPointSettings.MAX_ZOOM);
-
         if (isNewValueValid && value !== currentZoom) {
             store.dispatch(updateZoom(value));
         }

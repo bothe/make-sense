@@ -61,7 +61,7 @@ export class RectUtil {
             }
         }
     }
-
+    
     public static resizeRect(inputRect: IRect, rectAnchor: Direction, delta): IRect {
         const rect: IRect = {...inputRect};
         switch (rectAnchor) {
@@ -100,17 +100,17 @@ export class RectUtil {
                 rect.height += delta.y;
                 break;
         }
-
-        if (rect.width < 0)  {
+ 
+        if (rect.width < 0) {
             rect.x = rect.x + rect.width;
-            rect.width = - rect.width;
+            rect.width = -rect.width;
         }
-
-        if (rect.height < 0)  {
+    
+        if (rect.height < 0) {
             rect.y = rect.y + rect.height;
-            rect.height = - rect.height;
+            rect.height = -rect.height;
         }
-
+        
         return rect;
     }
 
@@ -162,4 +162,20 @@ export class RectUtil {
             y: NumberUtil.snapValueToRange(point.y, rect.y, rect.y + rect.height)
         }
     }
+
+    public static getCenter(rect: IRect): IPoint {
+        return {
+            x: rect.x + rect.width / 2,
+            y: rect.y + rect.height / 2
+        }
+    }
+
+    public static getSize(rect: IRect): ISize {
+        return {
+            width: rect.width,
+            height: rect.height
+        }
+    }
 }
+
+

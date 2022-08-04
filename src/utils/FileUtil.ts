@@ -1,46 +1,58 @@
-import uuidv1 from 'uuid/v1';
-import {ImageData} from "../store/labels/types";
 
 export class FileUtil {
-    public static mapFileDataToImageData(fileData: File): ImageData {
-        return {
-            id: uuidv1(),
-            fileData: fileData,
-            loadStatus: false,
-            labelRects: [],
-            labelPoints: [],
-            labelLines: [],
-            labelPolygons: [],
-            labelTagId: null,
-            isVisitedByObjectDetector: false,
-            isVisitedByPoseDetector: false
-        }
-    }
-
-    public static loadImage(fileData: File, onSuccess: (image:HTMLImageElement) => any, onFailure: () => any): any {
-		return new Promise((resolve, reject) => {
-			const url = URL.createObjectURL(fileData);
+    public static loadImage(fileData: File): Promise<HTMLImageElement> {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(fileData);
             const image = new Image();
-			image.src = url;
-			image.onload = () => {
-				onSuccess(image);
-				resolve();
-			};
-			image.onerror = () => {
-				onFailure();
-				reject();
-			};
-		})
-
+            image.src = url;
+            image.onload = () => resolve(image);
+            image.onerror = reject;
+        });
     }
 
-    public static loadLabelsList(fileData: File, onSuccess: (labels:string[]) => any, onFailure: () => any) {
-        const reader = new FileReader();
-        reader.readAsText(fileData);
-        reader.onloadend = function (evt: any) {
-            const contents:string = evt.target.result;
-            onSuccess(contents.split(/[\r\n]/));
-        };
-        reader.onerror = () => onFailure();
+    public static loadImages(fileData: File[]): Promise<HTMLImageElement[]> {
+        return new Promise((resolve, reject) => {
+            const promises: Promise<HTMLImageElement>[] = fileData.map((data: File) => FileUtil.loadImage(data));
+            Promise
+                .all(promises)
+                .then((values: HTMLImageElement[]) => resolve(values))
+                .catch((error) => reject(error));
+        });
+    }
+
+    public static readFile(fileData: File): Promise<string> {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = (event: any) => {
+                resolve(event?.target?.result);
+            };
+            reader.onerror = reject;
+            reader.readAsText(fileData);
+        });
+    }
+
+    public static readFiles(fileData: File[]): Promise<string[]> {
+        return new Promise((resolve, reject) => {
+            const promises: Promise<string>[] = fileData.map((data: File) => FileUtil.readFile(data));
+            Promise
+                .all(promises)
+                .then((values: string[]) => resolve(values))
+                .catch((error) => reject(error));
+        });
+    }
+
+    public static extractFileExtension(name: string): string | null {
+        const parts = name.split(".");
+        return parts.length > 1 ? parts[parts.length - 1] : null;
+    }
+
+    public static extractFileName(name: string): string | null {
+        const splitPath = name.split(".");
+        let fName = "";
+        for (const idx of Array(splitPath.length - 1).keys()) {
+            if (fName === "") fName += splitPath[idx];
+            else fName += "." + splitPath[idx];
+        }
+        return fName;
     }
 }

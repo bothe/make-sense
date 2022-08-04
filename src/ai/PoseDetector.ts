@@ -1,17 +1,18 @@
+import '@tensorflow/tfjs-backend-webgl';
 import * as posenet from '@tensorflow-models/posenet';
-import {PoseNet} from "@tensorflow-models/posenet";
-import {Pose} from "@tensorflow-models/posenet";
-import {store} from "../index";
-import {updatePoseDetectorStatus} from "../store/ai/actionCreators";
-import {AIPoseDetectionActions} from "../logic/actions/AIPoseDetectionActions";
-import {LabelType} from "../data/enums/LabelType";
-import {LabelsSelector} from "../store/selectors/LabelsSelector";
-import {updateActiveLabelType} from "../store/labels/actionCreators";
+import {PoseNet} from '@tensorflow-models/posenet';
+import {Pose} from '@tensorflow-models/posenet';
+import {store} from '../index';
+import {updatePoseDetectorStatus} from '../store/ai/actionCreators';
+import {AIPoseDetectionActions} from '../logic/actions/AIPoseDetectionActions';
+import {LabelType} from '../data/enums/LabelType';
+import {LabelsSelector} from '../store/selectors/LabelsSelector';
+import {updateActiveLabelType} from '../store/labels/actionCreators';
 
 export class PoseDetector {
     private static model: PoseNet;
 
-    public static loadModel(callback?: () => any) {
+    public static loadModel(callback?: () => unknown) {
         posenet
             .load({
                 architecture: 'ResNet50',
@@ -24,26 +25,32 @@ export class PoseDetector {
                 store.dispatch(updatePoseDetectorStatus(true));
                 store.dispatch(updateActiveLabelType(LabelType.POINT));
                 const activeLabelType: LabelType = LabelsSelector.getActiveLabelType();
-                activeLabelType === LabelType.POINT && AIPoseDetectionActions.detectPoseForActiveImage();
-                callback && callback();
+                if (activeLabelType === LabelType.POINT) {
+                    AIPoseDetectionActions.detectPoseForActiveImage();
+                }
+                if (callback) {
+                    callback();
+                }
             })
             .catch((error) => {
                 // TODO
-                throw new Error(error);
+                throw new Error(error as string);
             })
     }
 
-    public static predict(image: HTMLImageElement, callback?: (predictions: Pose[]) => any) {
+    public static predict(image: HTMLImageElement, callback?: (predictions: Pose[]) => unknown) {
         if (!PoseDetector.model) return;
 
         PoseDetector.model
             .estimateMultiplePoses(image)
             .then((predictions: Pose[]) => {
-                callback && callback(predictions)
+                if (callback) {
+                    callback(predictions)
+                }
             })
             .catch((error) => {
                 // TODO
-                throw new Error(error);
+                throw new Error(error as string);
             })
     }
 }

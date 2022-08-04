@@ -1,32 +1,31 @@
-import {BaseRenderEngine} from "./BaseRenderEngine";
-import {RenderEngineConfig} from "../../settings/RenderEngineConfig";
-import {LabelType} from "../../data/enums/LabelType";
-import {EditorData} from "../../data/EditorData";
-import {RenderEngineUtil} from "../../utils/RenderEngineUtil";
-import {ImageData, LabelLine} from "../../store/labels/types";
-import {IPoint} from "../../interfaces/IPoint";
-import {RectUtil} from "../../utils/RectUtil";
-import {store} from "../../index";
+import {BaseRenderEngine} from './BaseRenderEngine';
+import {RenderEngineSettings} from '../../settings/RenderEngineSettings';
+import {LabelType} from '../../data/enums/LabelType';
+import {EditorData} from '../../data/EditorData';
+import {RenderEngineUtil} from '../../utils/RenderEngineUtil';
+import {ImageData, LabelLine} from '../../store/labels/types';
+import {IPoint} from '../../interfaces/IPoint';
+import {RectUtil} from '../../utils/RectUtil';
+import {store} from '../../index';
 import {
     updateActiveLabelId,
     updateFirstLabelCreatedFlag,
     updateHighlightedLabelId,
     updateImageDataById
-} from "../../store/labels/actionCreators";
-import {EditorActions} from "../actions/EditorActions";
-import {LabelsSelector} from "../../store/selectors/LabelsSelector";
-import {DrawUtil} from "../../utils/DrawUtil";
-import {GeneralSelector} from "../../store/selectors/GeneralSelector";
-import uuidv1 from "uuid/v1";
-import {ILine} from "../../interfaces/ILine";
-import {LineUtil} from "../../utils/LineUtil";
-import {IRect} from "../../interfaces/IRect";
-import {updateCustomCursorStyle} from "../../store/general/actionCreators";
-import {CustomCursorStyle} from "../../data/enums/CustomCursorStyle";
-import {LineAnchorType} from "../../data/enums/LineAnchorType";
+} from '../../store/labels/actionCreators';
+import {EditorActions} from '../actions/EditorActions';
+import {LabelsSelector} from '../../store/selectors/LabelsSelector';
+import {DrawUtil} from '../../utils/DrawUtil';
+import {GeneralSelector} from '../../store/selectors/GeneralSelector';
+import { v4 as uuidv4 } from 'uuid';
+import {ILine} from '../../interfaces/ILine';
+import {LineUtil} from '../../utils/LineUtil';
+import {updateCustomCursorStyle} from '../../store/general/actionCreators';
+import {CustomCursorStyle} from '../../data/enums/CustomCursorStyle';
+import {LineAnchorType} from '../../data/enums/LineAnchorType';
+import {Settings} from '../../settings/Settings';
 
 export class LineRenderEngine extends BaseRenderEngine {
-    private config: RenderEngineConfig = new RenderEngineConfig();
 
     // =================================================================================================================
     // STATE
@@ -58,7 +57,7 @@ export class LineRenderEngine extends BaseRenderEngine {
                 store.dispatch(updateActiveLabelId(labelLineUnderMouse.id));
             } else if (!this.isInProgress() && isMouseOverImage) {
                 this.startNewLabelCreation(data)
-            } else {
+            } else if (this.isInProgress()) {
                 this.finishNewLabelCreation(data);
             }
         }
@@ -102,10 +101,12 @@ export class LineRenderEngine extends BaseRenderEngine {
         const highlightedLabelId: string = LabelsSelector.getHighlightedLabelId();
         const imageData: ImageData = LabelsSelector.getActiveImageData();
         imageData.labelLines.forEach((labelLine: LabelLine) => {
-            const isActive: boolean = labelLine.id === activeLabelId || labelLine.id === highlightedLabelId;
-            const lineOnCanvas = RenderEngineUtil.transferLineFromImageToViewPortContent(labelLine.line, data)
-            if (!(labelLine.id === activeLabelId && this.isResizeInProgress())) {
-                this.drawLine(lineOnCanvas, isActive)
+            if (labelLine.isVisible) {
+                const isActive: boolean = labelLine.id === activeLabelId || labelLine.id === highlightedLabelId;
+                const lineOnCanvas = RenderEngineUtil.transferLineFromImageToViewPortContent(labelLine.line, data)
+                if (!(labelLine.id === activeLabelId && this.isResizeInProgress())) {
+                    this.drawLine(labelLine.labelId, lineOnCanvas, isActive)
+                }
             }
         });
     }
@@ -113,9 +114,8 @@ export class LineRenderEngine extends BaseRenderEngine {
     private drawActivelyCreatedLabel(data: EditorData) {
         if (this.isInProgress()) {
             const line = {start: this.lineCreationStartPoint, end: data.mousePositionOnViewPortContent}
-            DrawUtil.drawLine(this.canvas, line.start, line.end, this.config.lineActiveColor, this.config.lineThickness);
-            const lineStartHandle = RectUtil.getRectWithCenterAndSize(this.lineCreationStartPoint, this.config.anchorSize);
-            DrawUtil.drawRectWithFill(this.canvas, lineStartHandle, this.config.activeAnchorColor);
+            DrawUtil.drawLine(this.canvas, line.start, line.end, RenderEngineSettings.lineActiveColor, RenderEngineSettings.LINE_THICKNESS);
+            DrawUtil.drawCircleWithFill(this.canvas, this.lineCreationStartPoint, Settings.RESIZE_HANDLE_DIMENSION_PX/2, RenderEngineSettings.defaultAnchorColor)
         }
     }
 
@@ -129,7 +129,7 @@ export class LineRenderEngine extends BaseRenderEngine {
                 start: this.lineUpdateAnchorType === LineAnchorType.START ? snappedMousePosition : lineOnCanvas.start,
                 end: this.lineUpdateAnchorType === LineAnchorType.END ? snappedMousePosition : lineOnCanvas.end
             }
-            this.drawLine(lineToDraw, true)
+            this.drawLine(activeLabelLine.labelId, lineToDraw, true)
         }
     }
 
@@ -145,27 +145,27 @@ export class LineRenderEngine extends BaseRenderEngine {
                 } else {
                     RenderEngineUtil.wrapDefaultCursorStyleInCancel(data);
                 }
-                this.canvas.style.cursor = "none";
+                this.canvas.style.cursor = 'none';
             } else {
-                this.canvas.style.cursor = "default";
+                this.canvas.style.cursor = 'default';
             }
         }
     }
 
-    private drawLine(line: ILine, isActive: boolean) {
-        const color: string = isActive ? this.config.lineActiveColor : this.config.lineInactiveColor;
+    private drawLine(labelId: string, line: ILine, isActive: boolean) {
+        const lineColor: string = BaseRenderEngine.resolveLabelLineColor(labelId, isActive)
+        const anchorColor = BaseRenderEngine.resolveLabelAnchorColor(isActive)
         const standardizedLine: ILine = {
             start: RenderEngineUtil.setPointBetweenPixels(line.start),
             end: RenderEngineUtil.setPointBetweenPixels(line.end)
         }
-        DrawUtil.drawLine(this.canvas, standardizedLine.start, standardizedLine.end, color, this.config.lineThickness);
+        DrawUtil.drawLine(this.canvas, standardizedLine.start, standardizedLine.end, lineColor, RenderEngineSettings.LINE_THICKNESS);
         if (isActive) {
+
             LineUtil
                 .getPoints(line)
-                .map((point: IPoint) => RectUtil.getRectWithCenterAndSize(point, this.config.anchorSize))
-                .forEach((handleRect: IRect) => {
-                    DrawUtil.drawRectWithFill(this.canvas, handleRect, this.config.activeAnchorColor);
-                })
+                .forEach((point: IPoint) => DrawUtil.drawCircleWithFill(this.canvas, point,
+                    Settings.RESIZE_HANDLE_DIMENSION_PX/2, anchorColor))
         }
     }
 
@@ -183,7 +183,7 @@ export class LineRenderEngine extends BaseRenderEngine {
 
     private isMouseOverAnchor(mouse: IPoint, anchor: IPoint): boolean {
         if (!mouse || !anchor) return null;
-        return RectUtil.isPointInside(RectUtil.getRectWithCenterAndSize(anchor, this.config.anchorSize), mouse);
+        return RectUtil.isPointInside(RectUtil.getRectWithCenterAndSize(anchor, RenderEngineSettings.anchorSize), mouse);
     }
 
     // =================================================================================================================
@@ -204,9 +204,10 @@ export class LineRenderEngine extends BaseRenderEngine {
         const activeLabelId = LabelsSelector.getActiveLabelNameId();
         const imageData: ImageData = LabelsSelector.getActiveImageData();
         const labelLine: LabelLine = {
-            id: uuidv1(),
+            id: uuidv4(),
             labelId: activeLabelId,
-            line: lineOnImage
+            line: lineOnImage,
+            isVisible: true
         };
         imageData.labelLines.push(labelLine);
         store.dispatch(updateImageDataById(imageData.id, imageData));
@@ -274,7 +275,7 @@ export class LineRenderEngine extends BaseRenderEngine {
             const mouseOverLine = RenderEngineUtil.isMouseOverLine(
                 data.mousePositionOnViewPortContent,
                 lineOnCanvas,
-                this.config.anchorHoverSize.width / 2
+                RenderEngineSettings.anchorHoverSize.width / 2
             )
             if (mouseOverLine) return labelLines[i]
         }

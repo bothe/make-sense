@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import './MobileMainView.scss';
-import Scrollbars from 'react-custom-scrollbars';
+import Scrollbars from 'react-custom-scrollbars-2';
 import {ISize} from "../../interfaces/ISize";
 import {AppState} from "../../store";
 import {connect} from "react-redux";
@@ -50,11 +50,11 @@ const MobileMainView: React.FC<IProps> = ({size}) => {
         });
     };
 
-    const getSocialMediaButtons = (size:ISize) => {
+    const getSocialMediaButtons = (mediaSize:ISize) => {
         return SocialMediaData.map((data:ISocialMedia, index: number) => {
             return <ImageButton
                 key={index}
-                buttonSize={size}
+                buttonSize={mediaSize}
                 image={data.imageSrc}
                 imageAlt={data.imageAlt}
                 href={data.href}
@@ -82,7 +82,7 @@ const MobileMainView: React.FC<IProps> = ({size}) => {
         <img
             draggable={false}
             alt={"main-logo"}
-            src={"img/main-image-color.png"}
+            src={"ico/main-image-color.png"}
         />
         <div className="TriangleHorizontal Bottom">
             <div className="TriangleHorizontalContent"/>
