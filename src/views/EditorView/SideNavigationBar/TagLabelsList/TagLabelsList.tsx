@@ -1,7 +1,7 @@
 import {ISize} from "../../../../interfaces/ISize";
 import {ImageData, LabelName} from "../../../../store/labels/types";
 import React from "react";
-import Scrollbars from "react-custom-scrollbars";
+import Scrollbars from "react-custom-scrollbars-2";
 import {updateImageDataById} from "../../../../store/labels/actionCreators";
 import {AppState} from "../../../../store";
 import {connect} from "react-redux";
@@ -99,7 +99,7 @@ const TagLabelsList: React.FC<IProps> = (
                     <img
                         draggable={false}
                         alt={"upload"}
-                        src={"img/type-writer.png"}
+                        src={"ico/type-writer.png"}
                     />
                     <p className="extraBold">Your label list is empty</p>
                 </div> :

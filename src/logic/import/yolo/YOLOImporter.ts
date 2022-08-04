@@ -1,13 +1,13 @@
-import {AnnotationImporter} from "../AnnotationImporter";
-import {ImageData, LabelName} from "../../../store/labels/types";
-import {FileUtil} from "../../../utils/FileUtil";
-import {ArrayUtil} from "../../../utils/ArrayUtil";
-import {NoLabelNamesFileProvidedError} from "./YOLOErrors";
-import {LabelsSelector} from "../../../store/selectors/LabelsSelector";
-import {YOLOUtils} from "./YOLOUtils";
-import {ImageDataUtil} from "../../../utils/ImageDataUtil";
-import {zip, find} from "lodash";
-import {ImageRepository} from "../../imageRepository/ImageRepository";
+import {AnnotationImporter} from '../AnnotationImporter';
+import {ImageData, LabelName} from '../../../store/labels/types';
+import {FileUtil} from '../../../utils/FileUtil';
+import {ArrayUtil} from '../../../utils/ArrayUtil';
+import {NoLabelNamesFileProvidedError} from './YOLOErrors';
+import {LabelsSelector} from '../../../store/selectors/LabelsSelector';
+import {YOLOUtils} from './YOLOUtils';
+import {ImageDataUtil} from '../../../utils/ImageDataUtil';
+import {zip, find} from 'lodash';
+import {ImageRepository} from '../../imageRepository/ImageRepository';
 
 export type YOLOFilesSpec = {
     labelNameFile: File
@@ -15,7 +15,7 @@ export type YOLOFilesSpec = {
 }
 
 export class YOLOImporter extends AnnotationImporter {
-    private static labelsFileName: string = "labels.txt"
+    private static labelsFileName: string = 'labels.txt'
 
     public import(
         filesData: File[],
@@ -42,9 +42,9 @@ export class YOLOImporter extends AnnotationImporter {
                 })
                 .catch((error: Error) => onFailure(error))
         } catch (error) {
-            onFailure(error)
+            onFailure(error as Error)
         }
-    };
+    }
 
     public static filterFilesData(filesData: File[], imagesData: ImageData[]): YOLOFilesSpec {
         const functionalityPartitionResult = ArrayUtil.partition(
@@ -90,7 +90,7 @@ export class YOLOImporter extends AnnotationImporter {
     public static injectImageDataWithAnnotations(sourceImageData: ImageData[], annotatedImageData: ImageData[]): ImageData[] {
         return sourceImageData.map((i: ImageData) => {
             const result = find(annotatedImageData, {id: i.id});
-            return !!result ? result : i;
+            return result ? result : i;
         })
     }
 }
